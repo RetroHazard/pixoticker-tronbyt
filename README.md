@@ -25,7 +25,7 @@ If you just want to run it, flash the credential-free release (`pixoticker-tronb
 Prerequisites: [ESP-IDF v5.5.x][idf] installed, with its export script sourced so `IDF_PATH` is set.
 
 ```bash
-git clone --recurse-submodules <this repository> pixoticker-tronbyt
+git clone --recurse-submodules https://github.com/RetroHazard/pixoticker-tronbyt.git
 cd pixoticker-tronbyt
 git -C firmware-esp32 apply ../patches/pixoticker.patch
 ```
