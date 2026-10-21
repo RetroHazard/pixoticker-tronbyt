@@ -2,7 +2,7 @@
 
 Tronbyt client firmware for the Pixoticker: an original ESP32 (no PSRAM, 4 MB flash) driving a 64x32 HUB75 panel. It fetches WebP images from a [Tronbyt server][server] over HTTP or WebSocket and displays them. Built from unmodified [tronbyt/firmware-esp32][upstream] (a git submodule) plus a small patch with Pixoticker-specific memory, Wi-Fi and provisioning fixes. [HYBRID_IMAGE.md](HYBRID_IMAGE.md) explains how and why.
 
-⚠️ Flashing this firmware replaces the original Pixoticker firmware and voids any warranty. No support is implied.
+⚠️ Flashing this firmware replaces the original Pixoticker firmware and voids any warranty. No support is implied. **Back up the full flash before making any changes** (see [Flashing](#flashing)).
 
 ## Ready-made image
 
@@ -88,6 +88,13 @@ git add firmware-esp32 patches
 
 ## Flashing
 
+> **Back up first.** Before changing anything on a Pixoticker, read and keep a backup of the **entire 4 MB flash** (offset `0x0`, size `0x400000`). It is the only way back to the original Pixoticker firmware and its settings, and it is what [HYBRID_IMAGE.md](HYBRID_IMAGE.md) was derived from. Store it privately: once the device has been configured it contains your Wi-Fi password in clear text.
+>
+> - ESPConnect: **Flash Tools → Backup** (step 2 below).
+> - CLI: `python -m esptool --chip esp32 --port PORT --baud 460800 read-flash 0x0 0x400000 pixoticker-backup-0x0.bin`
+>
+> To restore, flash that file at `0x0` the same way as any full image.
+
 Always flash the merged image at address **0x0** (DIO, 40 MHz, 4 MB). It replaces everything, including saved Wi-Fi/server settings.
 
 **USB-serial driver** (either method). The Pixoticker's USB bridge is a CH340:
@@ -99,7 +106,7 @@ Always flash the merged image at address **0x0** (DIO, 40 MHz, 4 MB). It replace
 **Browser (recommended): [ESPConnect](https://thelastoutpostworkshop.github.io/ESPConnect/)** — Chromium-based browser.
 
 1. Connect the Pixoticker over USB (macOS: set the baud selector to 460800 first; default is 921600) and click **Connect**. If it does not enter the bootloader on its own: hold BOOT, tap RESET, keep holding BOOT while clicking Connect.
-2. Optional but worthwhile: **Flash Tools → Backup** the whole flash first so the previous firmware can be restored.
+2. **Flash Tools → Backup** the whole flash and keep the file (see [Back up first](#flashing)), unless you already have a backup.
 3. **Flash Tools → Flash Firmware**: choose the `.bin`, set the offset to `0x0` (not the "app"/0x10000 preset; the full image needs no chip erase), and flash.
 4. Reset the board. The **Serial Monitor** tab shows boot and Wi-Fi progress.
 
