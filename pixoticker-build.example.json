@@ -1,0 +1,9 @@
+{
+    "name": "living-room",
+    "wifi_ssid": "MyNetwork",
+    "wifi_password": "my-wifi-password",
+    "remote_url": "http://tronbyt.local:8000/<deviceID>/next",
+    "station_only": true,
+    "custom_ca": "",
+    "version": ""
+}

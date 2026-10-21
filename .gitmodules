@@ -1,0 +1,4 @@
+[submodule "firmware-esp32"]
+	path = firmware-esp32
+	url = https://github.com/tronbyt/firmware-esp32.git
+	ignore = dirty

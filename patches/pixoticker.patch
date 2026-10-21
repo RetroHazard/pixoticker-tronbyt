@@ -1,0 +1,159 @@
+diff --git a/.gitignore b/.gitignore
+index 790831a..cf90284 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -18,3 +18,5 @@ secrets.json.injected*
+ main/certs/custom_ca.pem
+ .cache/clangd/*
+ CMakePresets.json
++build_custom_*
++sdkconfig.custom_*
+diff --git a/main/ap.c b/main/ap.c
+index cd3d8c4..f529616 100644
+--- a/main/ap.c
++++ b/main/ap.c
+@@ -12,6 +12,7 @@
+ #include <string.h>
+ #include <sys/param.h>
+ 
++#include "buffer_memory.h"
+ #include "nvs_settings.h"
+ #include "wifi.h"
+ 
+@@ -560,7 +561,7 @@ static void url_decode(char *str) {
+ static esp_err_t save_handler(httpd_req_t *req) {
+   ESP_LOGI(TAG, "Processing form submission");
+ 
+-  char *buf = heap_caps_malloc(4096, MALLOC_CAP_SPIRAM);
++  char *buf = heap_caps_malloc(4096, BUFFER_MEMORY_CAPS);
+   if (buf == NULL) {
+     ESP_LOGE(TAG, "Failed to allocate memory for form data");
+     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Server Error");
+@@ -605,7 +606,12 @@ static esp_err_t save_handler(httpd_req_t *req) {
+   char touch_beep_val[4] = {0};
+   char skip_version_val[4] = {0};
+   char skip_boot_val[4] = {0};
++#if CONFIG_BOARD_PIXOTICKER
++  // This board has no swap-colours checkbox; preserve its panel mapping.
++  bool swap_colors = nvs_get_swap_colors();
++#else
+   bool swap_colors = false;
++#endif
+   bool disable_touch = false;
+   bool touch_beep = false;
+   bool skip_display_version = false;
+@@ -704,7 +710,7 @@ static esp_err_t save_handler(httpd_req_t *req) {
+ static esp_err_t update_handler(httpd_req_t *req) {
+   esp_ota_handle_t update_handle = 0;
+   const esp_partition_t *update_partition = NULL;
+-  char *buf = heap_caps_malloc(OTA_BUFFER_SIZE, MALLOC_CAP_SPIRAM);
++  char *buf = heap_caps_malloc(OTA_BUFFER_SIZE, BUFFER_MEMORY_CAPS);
+   if (buf == NULL) {
+     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Alloc failed");
+     return ESP_FAIL;
+diff --git a/main/buffer_memory.h b/main/buffer_memory.h
+new file mode 100644
+index 0000000..71c018e
+--- /dev/null
++++ b/main/buffer_memory.h
+@@ -0,0 +1,11 @@
++#pragma once
++
++#include "esp_heap_caps.h"
++#include "sdkconfig.h"
++
++// Keep buffers in PSRAM on equipped boards and byte-addressable internal RAM otherwise.
++#ifdef CONFIG_SPIRAM
++#define BUFFER_MEMORY_CAPS (MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)
++#else
++#define BUFFER_MEMORY_CAPS (MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)
++#endif
+diff --git a/main/main.c b/main/main.c
+index 91da0e7..4e54ea7 100644
+--- a/main/main.c
++++ b/main/main.c
+@@ -12,6 +12,7 @@
+ #include <webp/demux.h>
+ 
+ #include "ap.h"
++#include "buffer_memory.h"
+ #include "display.h"
+ #include "esp_sntp.h"
+ #include "flash.h"
+@@ -482,7 +483,7 @@ static void websocket_event_handler(void* handler_args, esp_event_base_t base,
+           break;
+         }
+ 
+-        uint8_t* new_buf = heap_caps_realloc(webp, new_size, MALLOC_CAP_SPIRAM);
++        uint8_t* new_buf = heap_caps_realloc(webp, new_size, BUFFER_MEMORY_CAPS);
+         if (new_buf == NULL) {
+           ESP_LOGE(TAG, "Failed to allocate memory (%zu bytes)", new_size);
+           if (webp) {
+diff --git a/main/remote.c b/main/remote.c
+index 9d0cbc7..50f7c2b 100644
+--- a/main/remote.c
++++ b/main/remote.c
+@@ -9,6 +9,7 @@
+ #include <stdlib.h>
+ #include <string.h>
+ 
++#include "buffer_memory.h"
+ #include "display.h"
+ #include "gfx.h"
+ #include "nvs_settings.h"
+@@ -154,7 +155,7 @@ static esp_err_t _httpCallback(esp_http_client_event_t* event) {
+ 
+         // And reallocate
+         void* new =
+-            heap_caps_realloc(state->buf, state->size, MALLOC_CAP_SPIRAM);
++            heap_caps_realloc(state->buf, state->size, BUFFER_MEMORY_CAPS);
+         if (new == NULL) {
+           ESP_LOGE(TAG, "Resizing response buffer failed");
+           free(state->buf);
+@@ -202,7 +203,7 @@ int remote_get(const char* url, uint8_t** buf, size_t* len,
+   // State for processing the response
+   struct remote_state state = {
+       .buf =
+-          heap_caps_malloc(CONFIG_HTTP_BUFFER_SIZE_DEFAULT, MALLOC_CAP_SPIRAM),
++          heap_caps_malloc(CONFIG_HTTP_BUFFER_SIZE_DEFAULT, BUFFER_MEMORY_CAPS),
+       .len = 0,
+       .size = CONFIG_HTTP_BUFFER_SIZE_DEFAULT,
+       .max = CONFIG_HTTP_BUFFER_SIZE_MAX,
+diff --git a/main/wifi.c b/main/wifi.c
+index 09122d4..b15d8c7 100644
+--- a/main/wifi.c
++++ b/main/wifi.c
+@@ -118,6 +118,13 @@ int wifi_initialize(const char* ssid, const char* password) {
+   // Configure STA with credentials if available
+   if (has_credentials) {
+     wifi_config_t sta_config = {0};
++#ifdef CONFIG_BOARD_PIXOTICKER
++    // Match the stock Pixoticker's saved security policy without forcing WPA2.
++    sta_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
++    sta_config.sta.pmf_cfg.capable = true;
++    sta_config.sta.pmf_cfg.required = false;
++    sta_config.sta.sae_pwe_h2e = WPA3_SAE_PWE_BOTH;
++#endif
+     nvs_get_ssid((char*)sta_config.sta.ssid, sizeof(sta_config.sta.ssid));
+     nvs_get_password((char*)sta_config.sta.password,
+                      sizeof(sta_config.sta.password));
+diff --git a/sdkconfig.defaults.pixoticker b/sdkconfig.defaults.pixoticker
+index f66cebe..4499b97 100644
+--- a/sdkconfig.defaults.pixoticker
++++ b/sdkconfig.defaults.pixoticker
+@@ -5,5 +5,6 @@ CONFIG_HTTP_BUFFER_SIZE_DEFAULT=10000
+ CONFIG_BOOT_WEBP_PARROT=y
+ CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+ CONFIG_SPIRAM=n
++CONFIG_ENABLE_AP_MODE=n
+ CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="boards/max_app_4mb.csv"
+ CONFIG_HUB75_CLK_PHASE_INVERTED=y
+diff --git a/sdkconfig.defaults.pixoticker-public b/sdkconfig.defaults.pixoticker-public
+new file mode 100644
+index 0000000..8464c5a
+--- /dev/null
++++ b/sdkconfig.defaults.pixoticker-public
+@@ -0,0 +1,3 @@
++# Apply after sdkconfig.defaults and sdkconfig.defaults.pixoticker.
++# Generic distribution: recipients provision credentials through the setup portal.
++CONFIG_ENABLE_AP_MODE=y
