@@ -96,7 +96,7 @@ Verified on the device: settings survived a controlled reboot, the first server 
 - **Zero-touch boot**: the device joins home Wi-Fi straight away and everything else is managed from the Tronbyt server. No portal step, and no confusing second `10.10.0.x` network or DHCP server.
 - **No open Tronbyt setup AP.** The Tronbyt portal is plain HTTP on an open network. Its `/save` lets anyone in radio range change the Wi-Fi settings and repoint the server URL, and its `/update` handler has no authentication. Station-only builds never start it.
 - **WPA3/PMF preserved**: no WPA2 downgrade on the router was needed.
-- **Less on the device**: the Pixoticker ticker app and its external data endpoints are gone, and the Pixoticker driver, AP and calibration records were not carried over. The device only talks to the local Tronbyt server, plus NTP.
+- **Less on the device**: the Pixoticker ticker app and its external data endpoints are gone (extracted and rebuit as a Tronbyt compatible/starlark app), and the Pixoticker driver, AP and calibration records were not carried over. The device only talks to the local Tronbyt server, plus NTP.
 - **USB-friendly startup** at low brightness.
 
 ## Original Pixoticker firmware: security notes
