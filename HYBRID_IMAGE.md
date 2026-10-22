@@ -9,7 +9,7 @@ This document keeps three firmware sources apart:
 | Term | Meaning |
 | :--- | :--- |
 | **Original Pixoticker firmware** | The vendor firmware the device shipped with, taken from the flash dump `used_flash_0x0.bin`. Its parts are prefixed "Pixoticker", e.g. Pixoticker bootloader, Pixoticker NVS. |
-| **Tronbyt OTA image** | The app-only image the Tronbyt server built for this device, `bitmex-ticker-firmware.bin`. Used unmodified. |
+| **Tronbyt OTA image** | The app-only image the Tronbyt server built for this device, `ticker-firmware.bin`. Used unmodified. |
 | **Upstream Tronbyt** | The `tronbyt/firmware-esp32` source code that the Tronbyt OTA image is built from, and that we patched and rebuilt. |
 
 Source paths such as `main/wifi.c` or `boards/max_app_4mb.csv` are relative to the upstream tree, `firmware-esp32/` in this repository. The Pixoticker fixes described below are carried in `patches/pixoticker.patch`.
@@ -19,7 +19,7 @@ Source paths such as `main/wifi.c` or `boards/max_app_4mb.csv` are relative to t
 | Image | What it is | SHA-256 (prefix) |
 | :--- | :--- | :--- |
 | `used_flash_0x0.bin` | Original Pixoticker firmware: full 4 MiB dump with bootloader, partition table, NVS and the Pixoticker ticker app (Arduino core, ESP-IDF v5.1.4, build `d7f4a33`). | `a5ff2c06` |
-| `bitmex-ticker-firmware.bin` | Tronbyt OTA image: **app-only**, built for this device by the Tronbyt server (`v1.7.2`, ESP-IDF v5.5.6), 1,311,744 bytes. | `c641486a` |
+| `ticker-firmware.bin` | Tronbyt OTA image: **app-only**, built for this device by the Tronbyt server (`v1.7.2`, ESP-IDF v5.5.6), 1,311,744 bytes. | `c641486a` |
 | `pixoticker-tronbyt-station-only-0x0.bin` | Final hybrid: full 4 MiB image, flashed at `0x0`. | `c8a14ae2` |
 
 ## Why the Tronbyt OTA image
